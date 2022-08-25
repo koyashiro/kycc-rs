@@ -65,4 +65,5 @@ fn execute(input: &str) -> Result<i32, AnyhowError> {
 fn test() {
     assert_eq!(execute("1").unwrap(), 1);
     assert_eq!(execute("42").unwrap(), 42);
+    assert_eq!(execute("5+20-4").unwrap(), 21);
 }
