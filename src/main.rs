@@ -107,7 +107,7 @@ fn expr<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Nod
 }
 
 fn mul<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Node, AnyhowError> {
-    let mut node = primary(iter)?;
+    let mut node = unary(iter)?;
 
     loop {
         match iter.peek() {
@@ -115,18 +115,35 @@ fn mul<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Node
                 iter.next();
                 node = Node::Multiplication {
                     lhs: Rc::new(node),
-                    rhs: Rc::new(primary(iter)?),
+                    rhs: Rc::new(unary(iter)?),
                 };
             }
             Some(Token::Division) => {
                 iter.next();
                 node = Node::Division {
                     lhs: Rc::new(node),
-                    rhs: Rc::new(primary(iter)?),
+                    rhs: Rc::new(unary(iter)?),
                 };
             }
             _ => return Ok(node),
         }
+    }
+}
+
+fn unary<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Node, AnyhowError> {
+    match iter.peek() {
+        Some(Token::Addition) => {
+            iter.next();
+            unary(iter)
+        }
+        Some(Token::Subtraction) => {
+            iter.next();
+            Ok(Node::Subtraction {
+                lhs: Rc::new(Node::Number(0)),
+                rhs: Rc::new(unary(iter)?),
+            })
+        }
+        _ => primary(iter),
     }
 }
 

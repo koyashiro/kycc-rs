@@ -30,7 +30,7 @@ impl From<Output> for CommandError {
 }
 
 fn compile(input: &str, output: &str) -> Result<(), AnyhowError> {
-    let o = Command::new("cargo").args(&["run", input]).output()?;
+    let o = Command::new("cargo").args(&["run", "--", input]).output()?;
     if !o.status.success() {
         return Err(anyhow!(CommandError::from(o)));
     }
@@ -69,4 +69,7 @@ fn test() {
     assert_eq!(execute("5+6*7").unwrap(), 47);
     assert_eq!(execute("5*(9-6)").unwrap(), 15);
     assert_eq!(execute("(3+5)/2").unwrap(), 4);
+    assert_eq!(execute("-10+20").unwrap(), 10);
+    assert_eq!(execute("- -10").unwrap(), 10);
+    assert_eq!(execute("- - +10").unwrap(), 10);
 }
