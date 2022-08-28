@@ -35,7 +35,10 @@ fn tokenize(input: &str) -> Result<Vec<Token>, AnyhowError> {
                 p = &p[1..];
                 tokens.push(Token::Minus);
             }
-            _ => return Err(anyhow!("unexpected token")),
+            _ => {
+                let ws = " ".repeat(p.as_ptr() as usize - input.as_ptr() as usize + 7);
+                return Err(anyhow!("{input}\n{ws}^ invalid token"));
+            }
         }
     }
     Ok(tokens)
