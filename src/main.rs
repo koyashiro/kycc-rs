@@ -10,69 +10,167 @@ use anyhow::{anyhow, Error as AnyhowError};
 
 #[derive(Debug)]
 enum Token {
+    /// `+`
     Addition,
+    /// `-`
     Subtraction,
+    /// `*`
     Multiplication,
+    /// `/`
     Division,
+    /// number
     Number(u64),
+    /// `(`
     ParenthesisBegin,
+    /// `)`
     ParenthesisEnd,
+    /// `==`
+    Equal,
+    /// `!=`
+    NotEqual,
+    /// `>`
+    GraterThen,
+    /// `>=`
+    GraterEqual,
+    /// `<`
+    LowerThen,
+    /// `<=`
+    LowerEqual,
 }
 
 fn tokenize(input: &str) -> Result<Vec<Token>, AnyhowError> {
     let mut tokens = Vec::<Token>::new();
     let mut p = input;
 
-    while let Some(s) = p.get(..1) {
-        match s {
-            " " | "\n" => {
-                p = &p[1..];
-            }
-            "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => {
-                let (n, cnt) = read_number(p)?;
-                p = &p[cnt..];
-                tokens.push(Token::Number(n));
-            }
-            "+" => {
-                p = &p[1..];
-                tokens.push(Token::Addition);
-            }
-            "-" => {
-                p = &p[1..];
-                tokens.push(Token::Subtraction);
-            }
-            "*" => {
-                p = &p[1..];
-                tokens.push(Token::Multiplication);
-            }
-            "/" => {
-                p = &p[1..];
-                tokens.push(Token::Division);
-            }
-            "(" => {
-                p = &p[1..];
-                tokens.push(Token::ParenthesisBegin);
-            }
-            ")" => {
-                p = &p[1..];
-                tokens.push(Token::ParenthesisEnd);
-            }
-            _ => {
-                let ws = " ".repeat(p.as_ptr() as usize - input.as_ptr() as usize + 7);
-                return Err(anyhow!("{input}\n{ws}^ invalid token"));
+    loop {
+        if let Some(s) = p.get(0..2) {
+            match s {
+                "==" => {
+                    p = &p[2..];
+                    tokens.push(Token::Equal);
+                    continue;
+                }
+                "!=" => {
+                    p = &p[2..];
+                    tokens.push(Token::NotEqual);
+                    continue;
+                }
+                ">=" => {
+                    p = &p[2..];
+                    tokens.push(Token::GraterEqual);
+                    continue;
+                }
+                "<=" => {
+                    p = &p[2..];
+                    tokens.push(Token::LowerEqual);
+                    continue;
+                }
+                _ => (),
             }
         }
+
+        match p.get(..1) {
+            Some(s) => match s {
+                " " | "\n" => {
+                    p = &p[1..];
+                }
+                "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => {
+                    let (n, cnt) = read_number(p)?;
+                    p = &p[cnt..];
+                    tokens.push(Token::Number(n));
+                }
+                "+" => {
+                    p = &p[1..];
+                    tokens.push(Token::Addition);
+                }
+                "-" => {
+                    p = &p[1..];
+                    tokens.push(Token::Subtraction);
+                }
+                "*" => {
+                    p = &p[1..];
+                    tokens.push(Token::Multiplication);
+                }
+                "/" => {
+                    p = &p[1..];
+                    tokens.push(Token::Division);
+                }
+                "(" => {
+                    p = &p[1..];
+                    tokens.push(Token::ParenthesisBegin);
+                }
+                ")" => {
+                    p = &p[1..];
+                    tokens.push(Token::ParenthesisEnd);
+                }
+                ">" => {
+                    p = &p[1..];
+                    tokens.push(Token::GraterThen);
+                }
+                "<" => {
+                    p = &p[1..];
+                    tokens.push(Token::LowerThen);
+                }
+                _ => {
+                    let ws = " ".repeat(p.as_ptr() as usize - input.as_ptr() as usize + 7);
+                    return Err(anyhow!("{input}\n{ws}^ invalid token"));
+                }
+            },
+            None => break,
+        }
     }
+
     Ok(tokens)
 }
 
 #[derive(Debug)]
 enum Node {
-    Addition { lhs: Rc<Node>, rhs: Rc<Node> },
-    Subtraction { lhs: Rc<Node>, rhs: Rc<Node> },
-    Multiplication { lhs: Rc<Node>, rhs: Rc<Node> },
-    Division { lhs: Rc<Node>, rhs: Rc<Node> },
+    Addition {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    Subtraction {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    Multiplication {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    Division {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
     Number(u64),
+    Equal {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    /// `!=`
+    NotEqual {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    /// `>`
+    GraterThen {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    /// `>=`
+    GraterEqual {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    /// `<`
+    LowerThen {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
+    /// `<=`
+    LowerEqual {
+        lhs: Rc<Node>,
+        rhs: Rc<Node>,
+    },
 }
 
 fn parse(tokens: &[Token]) -> Result<Node, AnyhowError> {
@@ -83,6 +181,76 @@ fn parse(tokens: &[Token]) -> Result<Node, AnyhowError> {
 }
 
 fn expr<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Node, AnyhowError> {
+    equality(iter)
+}
+
+fn equality<'a, I: Iterator<Item = &'a Token>>(
+    iter: &mut Peekable<I>,
+) -> Result<Node, AnyhowError> {
+    let mut node = relational(iter)?;
+
+    loop {
+        match iter.peek() {
+            Some(Token::Equal) => {
+                iter.next();
+                node = Node::Equal {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(relational(iter)?),
+                };
+            }
+            Some(Token::NotEqual) => {
+                iter.next();
+                node = Node::NotEqual {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(relational(iter)?),
+                };
+            }
+            _ => return Ok(node),
+        }
+    }
+}
+
+fn relational<'a, I: Iterator<Item = &'a Token>>(
+    iter: &mut Peekable<I>,
+) -> Result<Node, AnyhowError> {
+    let mut node = add(iter)?;
+
+    loop {
+        match iter.peek() {
+            Some(Token::LowerThen) => {
+                iter.next();
+                node = Node::LowerThen {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(add(iter)?),
+                };
+            }
+            Some(Token::LowerEqual) => {
+                iter.next();
+                node = Node::LowerEqual {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(add(iter)?),
+                };
+            }
+            Some(Token::GraterThen) => {
+                iter.next();
+                node = Node::GraterThen {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(add(iter)?),
+                };
+            }
+            Some(Token::GraterEqual) => {
+                iter.next();
+                node = Node::GraterEqual {
+                    lhs: Rc::new(node),
+                    rhs: Rc::new(add(iter)?),
+                };
+            }
+            _ => return Ok(node),
+        }
+    }
+}
+
+fn add<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<Node, AnyhowError> {
     let mut node = mul(iter)?;
 
     loop {
@@ -152,26 +320,13 @@ fn primary<'a, I: Iterator<Item = &'a Token>>(iter: &mut Peekable<I>) -> Result<
         Some(Token::ParenthesisBegin) => {
             let node = expr(iter)?;
             match iter.next() {
-                Some(Token::ParenthesisEnd) => {}
-                _ => return Err(anyhow!("expect `}}`")),
+                Some(Token::ParenthesisEnd) => Ok(node),
+                _ => Err(anyhow!("expect `}}`")),
             }
-            Ok(node)
         }
         Some(Token::Number(n)) => Ok(Node::Number(*n)),
         _ => Err(anyhow!("expect number or `}}`")),
     }
-}
-
-fn generate(node: &Node) -> Result<Vec<u8>, IoError> {
-    let mut buf = Vec::new();
-    writeln!(buf, ".intel_syntax noprefix")?;
-    writeln!(buf, ".globl main")?;
-    writeln!(buf, "main:")?;
-
-    write_node(&mut buf, node)?;
-    writeln!(buf, "  pop rax")?;
-    writeln!(buf, "  ret")?;
-    Ok(buf)
 }
 
 fn read_number(s: &str) -> Result<(u64, usize), AnyhowError> {
@@ -230,9 +385,75 @@ fn write_node(buf: &mut Vec<u8>, node: &Node) -> Result<(), IoError> {
             writeln!(buf, "  cqo")?;
             writeln!(buf, "  idiv rdi")?;
         }
+        Node::Equal { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  sete al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
+        Node::NotEqual { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  setne al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
+        Node::GraterThen { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  setg al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
+        Node::GraterEqual { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  setge al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
+        Node::LowerThen { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  setl al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
+        Node::LowerEqual { lhs, rhs } => {
+            write_node(buf, lhs)?;
+            write_node(buf, rhs)?;
+            writeln!(buf, "  pop rdi")?;
+            writeln!(buf, "  pop rax")?;
+            writeln!(buf, "  cmp rax, rdi")?;
+            writeln!(buf, "  setle al")?;
+            writeln!(buf, "  movzb rax, al")?;
+        }
     }
     writeln!(buf, "  push rax")?;
     Ok(())
+}
+
+fn generate(node: &Node) -> Result<Vec<u8>, IoError> {
+    let mut buf = Vec::new();
+    writeln!(buf, ".intel_syntax noprefix")?;
+    writeln!(buf, ".globl main")?;
+    writeln!(buf, "main:")?;
+
+    write_node(&mut buf, node)?;
+    writeln!(buf, "  pop rax")?;
+    writeln!(buf, "  ret")?;
+    Ok(buf)
 }
 
 fn main() -> Result<(), AnyhowError> {

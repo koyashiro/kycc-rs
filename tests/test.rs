@@ -72,4 +72,23 @@ fn test() {
     assert_eq!(execute("-10+20").unwrap(), 10);
     assert_eq!(execute("- -10").unwrap(), 10);
     assert_eq!(execute("- - +10").unwrap(), 10);
+
+    assert_eq!(execute("0==1").unwrap(), 0);
+    assert_eq!(execute("42==42").unwrap(), 1);
+    assert_eq!(execute("0!=1").unwrap(), 1);
+    assert_eq!(execute("42!=42").unwrap(), 0);
+
+    assert_eq!(execute("0<1").unwrap(), 1);
+    assert_eq!(execute("1<1").unwrap(), 0);
+    assert_eq!(execute("2<1").unwrap(), 0);
+    assert_eq!(execute("0<=1").unwrap(), 1);
+    assert_eq!(execute("1<=1").unwrap(), 1);
+    assert_eq!(execute("2<=1").unwrap(), 0);
+
+    assert_eq!(execute("1>0").unwrap(), 1);
+    assert_eq!(execute("1>1").unwrap(), 0);
+    assert_eq!(execute("1>2").unwrap(), 0);
+    assert_eq!(execute("1>=0").unwrap(), 1);
+    assert_eq!(execute("1>=1").unwrap(), 1);
+    assert_eq!(execute("1>=2").unwrap(), 0);
 }
