@@ -66,4 +66,7 @@ fn test() {
     assert_eq!(execute("1").unwrap(), 1);
     assert_eq!(execute("42").unwrap(), 42);
     assert_eq!(execute("5+20-4").unwrap(), 21);
+    assert_eq!(execute("5+6*7").unwrap(), 47);
+    assert_eq!(execute("5*(9-6)").unwrap(), 15);
+    assert_eq!(execute("(3+5)/2").unwrap(), 4);
 }
